@@ -1,6 +1,6 @@
 // 在文件开头添加常量声明
 const MAX_FILE_SIZE = 98 * 1024 * 1024; // 文件大小限制 (98MB)
-const MAX_TOTAL_STORAGE = 5 * 1024 * 1024 * 1024; // 总存储限制 (5GB)
+const MAX_TOTAL_STORAGE = 6 * 1024 * 1024 * 1024; // 总存储限制 (6GB)
 
 // 工具函数
 const utils = {
@@ -746,16 +746,59 @@ a.qr-btn {
   color: var(--text-color);
 }
 
+/* 修改左侧标题区域样式 */
 .title-left {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1rem; /* 增加文字和锁图标的间距 */
 }
 
-.title-icons {
-  display: flex;
+/* 标题链接样式 */
+.title-link {
+  text-decoration: none;
+  color: var(--text-color);
+  transition: all 0.2s ease;
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+  position: relative;
+  margin-left: -0.4rem;
+  display: inline-block; /* 让链接紧贴文字内容 */
+  line-height: 1.2; /* 减小行高 */
+}
+
+.title-link:hover {
+  background: var(--hover-bg);
+  color: var(--primary-color);
+}
+
+/* 锁图标样式 */
+.lock-icon {
+  font-size: 0.9em;
+  opacity: 0.7;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  width: 1.2em;
+  height: 1.2em;
+  transition: opacity 0.2s ease;
+  margin-left: 0.3rem; /* 微调锁图标的间距 */
+}
+
+/* 添加点击波纹效果 */
+.title-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background: var(--primary-color);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all 0.2s ease;
+}
+
+.title-link:active::after {
+  opacity: 0.1;
+  transform: scale(1);
 }
 
 /* 统一图标按钮样式 */
@@ -1075,8 +1118,8 @@ a.qr-btn {
 /* 优化滚动条样式 */
 .editor::-webkit-scrollbar,
 .preview::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;  
+  height: 12px;  
 }
 
 .editor::-webkit-scrollbar-track,
@@ -1087,15 +1130,15 @@ a.qr-btn {
 .editor::-webkit-scrollbar-thumb,
 .preview::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 4px;
-  border: 2px solid transparent;
+  border-radius: 6px;  
+  border: 3px solid transparent;  
   background-clip: padding-box;
 }
 
 .editor::-webkit-scrollbar-thumb:hover,
 .preview::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb);
-  border: 2px solid transparent;
+  border: 3px solid transparent;  
   background-clip: padding-box;
 }
 
@@ -1826,8 +1869,8 @@ a.qr-btn {
 
 /* 滚动条样式 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;  
+  height: 12px;  
 }
 
 ::-webkit-scrollbar-track {
@@ -1836,14 +1879,14 @@ a.qr-btn {
 
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 4px;
-  border: 2px solid transparent;
+  border-radius: 6px;  
+  border: 3px solid transparent;  
   background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb);
-  border: 2px solid transparent;
+  border: 3px solid transparent;  
   background-clip: padding-box;
 }
 
@@ -2445,8 +2488,8 @@ a.qr-btn {
 
 /* 添加文本输入框滚动条样式 */
 .editor textarea::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;  
+  height: 12px;  
 }
 
 .editor textarea::-webkit-scrollbar-track {
@@ -2455,14 +2498,14 @@ a.qr-btn {
 
 .editor textarea::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 4px;
-  border: 2px solid transparent;
+  border-radius: 6px;  
+  border: 3px solid transparent;  
   background-clip: padding-box;
 }
 
 .editor textarea::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb);
-  border: 2px solid transparent;
+  border: 3px solid transparent;  
   background-clip: padding-box;
 }
 
@@ -2873,11 +2916,6 @@ a.qr-btn {
     padding: 0.5rem;
   }
 }
-
-
-
-
-
 `;
 
 // Vue 应用代码
@@ -2919,14 +2957,15 @@ createApp({
     // 添加新的状态变量
     const allowTextUpload = ref(false);  // 控制文本上传
     const allowFileUpload = ref(false);  // 控制文件上传
-
-    // 在 appScript 的 setup 函数中添加以下状态和方法
     const showPasswordDialog = ref(false);
     const passwordTarget = ref(null);
     const newPassword = ref('');
     const passwordError = ref('');
     // 添加自动保存的状态和方法
     const lastSavedContent = ref(''); // 添加最后保存的内容
+    const isFileEditing = ref(false);
+    const editFileExpiresIn = ref('1d');
+    const editFileMaxViews = ref('0');
 
     // 在 setup() 函数中添加新的状态
     const storageInfo = ref({
@@ -3342,7 +3381,7 @@ createApp({
       }
     };
 
-    // 退出登录
+    // 退出登录，待定
     const adminLogout = function() {
       isAdmin.value = false;
       shares.value = [];
@@ -3501,10 +3540,12 @@ createApp({
       }
       try {
         error.value = null;
+        const credentials = localStorage.getItem('adminCredentials'); 
         const response = await fetch('/api/paste', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + credentials  // 认证
           },
           body: JSON.stringify({
             content: content.value,
@@ -3512,7 +3553,7 @@ createApp({
             expiresIn: expiresIn.value,
             isMarkdown: isMarkdown.value,
             customId: customId.value,
-            maxViews: maxViews.value ? parseInt(maxViews.value) : 0 // 添加这行
+            maxViews: maxViews.value ? parseInt(maxViews.value) : 0
           }),
         });
 
@@ -3539,11 +3580,7 @@ createApp({
       } catch (err) {
         error.value = err.message;
       }
-    };
-
-
-    
-
+    }
 
     // 上传文件
     const uploadFiles = async () => {
@@ -3688,6 +3725,13 @@ createApp({
           };
           xhr.onerror = () => reject(new Error('Network error'));
           xhr.open('POST', '/api/file');
+
+          // 添加认证头
+          const credentials = localStorage.getItem('adminCredentials');
+          if (credentials) {
+            xhr.setRequestHeader('Authorization', 'Basic ' + credentials);
+          }
+
           xhr.send(formData);
         });
 
@@ -4242,6 +4286,89 @@ createApp({
       }
     };
 
+
+    // 修改 startFileEdit 方法
+    const startFileEdit = async () => {
+      try {
+        const pathParts = window.location.pathname.split('/');
+        const id = pathParts[pathParts.length - 1];
+        const credentials = localStorage.getItem('adminCredentials');
+        
+        if (!credentials) {
+          throw new Error('未登录');
+        }
+
+        const response = await fetch('/api/file/' + id, {
+          headers: {
+            'Authorization': 'Basic ' + credentials
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('获取文件信息失败');
+        }
+
+        const data = await response.json();
+        
+        // 设置编辑状态
+        editFileExpiresIn.value = '1d'; // 默认值
+        editFileMaxViews.value = (data.maxViews || 0).toString(); // 设置当前的下载次数限制
+        isFileEditing.value = true;
+      } catch (err) {
+        console.error('Edit error:', err);
+        error.value = err.message;
+      }
+    };
+
+    // 修改 saveFileEdit 方法
+    const saveFileEdit = async () => {
+      try {
+        error.value = null;
+        const pathParts = window.location.pathname.split('/');
+        const id = pathParts[pathParts.length - 1];
+        const credentials = localStorage.getItem('adminCredentials');
+        
+        if (!credentials) {
+          throw new Error('未登录');
+        }
+
+        const response = await fetch('/api/admin/file/' + id + '/settings', {
+          method: 'PUT',
+          headers: {
+            'Authorization': 'Basic ' + credentials,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            expiresIn: editFileExpiresIn.value,
+            maxViews: parseInt(editFileMaxViews.value) || 0
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('保存失败');
+        }
+
+        const data = await response.json();
+        
+        // 更新文件信息
+        fileInfo.value = {
+          ...fileInfo.value,
+          expiresAt: data.expiresAt,
+          maxViews: data.maxViews,
+          viewCount: data.viewCount
+        };
+        
+        isFileEditing.value = false;
+      } catch (err) {
+        error.value = err.message;
+      }
+    };
+
+    // 添加取消编辑方法
+    const cancelFileEdit = () => {
+      isFileEditing.value = false;
+    };
+
     return {
       activeTab,
       content,
@@ -4327,6 +4454,12 @@ createApp({
       githubIconSvg,
       lastSavedContent,
       saveContent,
+      isFileEditing,
+      editFileExpiresIn,
+      editFileMaxViews,
+      startFileEdit,
+      saveFileEdit,
+      cancelFileEdit,
     };
   },
 
@@ -4729,8 +4862,17 @@ createApp({
           <div v-for="share in filteredShares" :key="share.id" class="share-item">
             <div class="title">
               <div class="title-left">
+              <a 
+                :href="share.url" 
+                target="_blank" 
+                  class="title-link"
+                :title="'点击打开' + (share.type === 'paste' ? '文本' : '文件') + '分享'"
+              >
+                <span class="title-text">
                 {{ share.type === 'paste' ? '文本分享' : '文件分享' }}
-                <span v-if="share.hasPassword" class="badge">密码保护</span>
+                  <span v-if="share.hasPassword" class="lock-icon" title="密码保护">🔒</span>
+                </span>
+              </a>
               </div>
               <div class="title-icons">
                 <!-- 添加直链按钮 -->
@@ -4850,6 +4992,15 @@ createApp({
     const isEditing = ref(false); // 添加编辑状态
     const editContent = ref(''); // 添加编辑内容
     const editMarkdown = ref(false); // 添加编辑时的 Markdown 开关状态
+    const editExpiresIn = ref('1d'); // 添加编辑时的过期时间状态
+    const editMaxViews = ref('0'); // 添加编辑时的访问次数状态
+    const maxViews = ref(0); // 添加最大访问次数状态
+    const viewCount = ref(0); // 添加已访问次数状态
+    const isFileEditing = ref(false);
+    const editFileExpiresIn = ref('1d');
+    const editFileMaxViews = ref('0'); // 添加这行，初始化可下载次数
+    // 下载等待状态变量
+    const downloading = ref(false);
 
     // 添加检查管理员状态的方法
     const checkAdmin = () => {
@@ -4859,10 +5010,38 @@ createApp({
     };
 
     // 添加开始编辑方法
-    const startEdit = () => {
-      editContent.value = content.value;
-      editMarkdown.value = isMarkdown.value; // 继承原有的 Markdown 状态
-      isEditing.value = true;
+    const startEdit = async () => {
+      try {
+        // 获取当前分享的最新信息
+        const pathParts = window.location.pathname.split('/');
+        const id = pathParts[pathParts.length - 1];
+        const credentials = localStorage.getItem('adminCredentials');
+        
+        const response = await fetch('/api/paste/' + id, {
+          headers: {
+            'Authorization': 'Basic ' + credentials
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('获取分享信息失败');
+        }
+
+        const data = await response.json();
+        
+        // 设置编辑状态
+        editContent.value = content.value;
+        editMarkdown.value = isMarkdown.value;
+        editExpiresIn.value = '1d';
+        // 添加数据检查，使用默认值 0
+        editMaxViews.value = (data.maxViews || 0).toString();
+        maxViews.value = data.maxViews || 0;
+        viewCount.value = data.viewCount || 0;
+        isEditing.value = true;
+      } catch (err) {
+        console.error('Edit error:', err);
+        error.value = err.message;
+      }
     };
 
     // 添加保存编辑方法
@@ -4881,7 +5060,9 @@ createApp({
           },
           body: JSON.stringify({
             content: editContent.value,
-            isMarkdown: editMarkdown.value // 添加 Markdown 状态
+            isMarkdown: editMarkdown.value,
+            expiresIn: editExpiresIn.value,
+            maxViews: parseInt(editMaxViews.value) || 0 // 添加访问次数
           })
         });
 
@@ -4889,8 +5070,15 @@ createApp({
           throw new Error('保存失败');
         }
 
+        const data = await response.json(); // 获取响应数据
+        
+        // 更新内容和状态
         content.value = editContent.value;
-        isMarkdown.value = editMarkdown.value; // 更新 Markdown 状态
+        isMarkdown.value = editMarkdown.value;
+        // 更新过期时间
+        expiresAt.value = data.expiresAt ? new Date(data.expiresAt) : null;
+        maxViews.value = data.maxViews; // 更新访问次数
+        viewCount.value = data.viewCount; // 更新已访问次数
         isEditing.value = false;
       } catch (err) {
         error.value = err.message;
@@ -5012,14 +5200,28 @@ createApp({
     // 添加下载文件的方法
     const downloadFile = async () => {
       try {
+        if (downloading.value) return; // 防止重复点击
+        downloading.value = true;
         error.value = null;
         const pathParts = window.location.pathname.split('/');
         const id = pathParts[pathParts.length - 1];
         
+        // 构建请求头
+        const headers = {};
+        
+        // 如果有密码，添加密码头
+        if (password.value) {
+          headers['X-Password'] = password.value;
+        }
+        
+        // 如果是管理员，添加认证头
+        const credentials = localStorage.getItem('adminCredentials');
+        if (credentials) {
+          headers['Authorization'] = 'Basic ' + credentials;
+        }
+        
         const response = await fetch('/api/file/' + id + '?download=true', {
-          headers: password.value ? {
-            'X-Password': password.value
-          } : {}
+          headers: headers
         });
 
         if (!response.ok) {
@@ -5038,6 +5240,8 @@ createApp({
         document.body.removeChild(a);
       } catch (err) {
         error.value = err.message;
+      } finally {
+        downloading.value = false;
       }
     };
 
@@ -5051,11 +5255,21 @@ createApp({
         
         const apiUrl = isFilePath ? '/api/file/' + id : '/api/paste/' + id;
         
-        const response = await fetch(apiUrl, {
-          headers: password.value ? {
-            'X-Password': password.value
-          } : {}
-        });
+        // 构建请求头
+        const headers = {};
+        
+        // 如果有密码,添加密码头
+        if (password.value) {
+          headers['X-Password'] = password.value;
+        }
+        
+        // 如果是管理员,添加认证头
+        const credentials = localStorage.getItem('adminCredentials');
+        if (credentials) {
+          headers['Authorization'] = 'Basic ' + credentials;
+        }
+
+        const response = await fetch(apiUrl, { headers });
 
         if (response.status === 401) {
           needPassword.value = true;
@@ -5077,15 +5291,16 @@ createApp({
           throw new Error(data.message || '加载失败');
         }
 
-        if (isFilePath) {
           const data = await response.json();
+        if (isFilePath) {
           fileInfo.value = data;
           content.value = '文件信息已加载';
         } else {
-          const data = await response.json();
           content.value = data.content;
           isMarkdown.value = data.isMarkdown;
           expiresAt.value = data.expiresAt ? new Date(data.expiresAt) : null;
+          maxViews.value = parseInt(data.maxViews) || 0;
+          viewCount.value = parseInt(data.viewCount) || 0;
         }
         loading.value = false;
         needPassword.value = false;
@@ -5473,6 +5688,88 @@ createApp({
       }, 100); // 给一个小延迟确保内容已渲染
     });
 
+    // 添加开始编辑文件的方法
+    const startFileEdit = async () => {
+      try {
+        const pathParts = window.location.pathname.split('/');
+        const id = pathParts[pathParts.length - 1];
+        const credentials = localStorage.getItem('adminCredentials');
+        
+        if (!credentials) {
+          throw new Error('未登录');
+        }
+
+        const response = await fetch('/api/file/' + id, {
+          headers: {
+            'Authorization': 'Basic ' + credentials
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('获取文件信息失败');
+        }
+
+        const data = await response.json();
+        
+        // 设置编辑状态
+        editFileExpiresIn.value = '1d'; // 默认值
+        editFileMaxViews.value = (data.maxViews || 0).toString(); // 设置当前的下载次数限制
+        isFileEditing.value = true;
+      } catch (err) {
+        console.error('Edit error:', err);
+        error.value = err.message;
+      }
+    };
+
+    // 添加保存文件编辑的方法
+    const saveFileEdit = async () => {
+      try {
+        error.value = null;
+        const pathParts = window.location.pathname.split('/');
+        const id = pathParts[pathParts.length - 1];
+        const credentials = localStorage.getItem('adminCredentials');
+        
+        if (!credentials) {
+          throw new Error('未登录');
+        }
+
+        const response = await fetch('/api/admin/file/' + id + '/settings', {
+          method: 'PUT',
+          headers: {
+            'Authorization': 'Basic ' + credentials,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            expiresIn: editFileExpiresIn.value,
+            maxViews: parseInt(editFileMaxViews.value) || 0
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('保存失败');
+        }
+
+        const data = await response.json();
+        
+        // 更新文件信息
+        fileInfo.value = {
+          ...fileInfo.value,
+          expiresAt: data.expiresAt,
+          maxViews: data.maxViews,
+          viewCount: data.viewCount
+        };
+        
+        isFileEditing.value = false;
+      } catch (err) {
+        error.value = err.message;
+      }
+    };
+
+    // 添加取消编辑方法
+    const cancelFileEdit = () => {
+      isFileEditing.value = false;
+    };
+
     return {
       content,
       isMarkdown,
@@ -5498,6 +5795,17 @@ createApp({
       currentTheme, // 添加暗色主题相关变量
       toggleTheme,
       themeIcon,  // 添加这行
+      editExpiresIn, // 添加编辑时的过期时间状态
+      editMaxViews, // 添加编辑时的访问次数状态
+      maxViews, // 添加这行
+      viewCount, // 添加这行
+      isFileEditing,
+      editFileExpiresIn,
+      editFileMaxViews, // 添加这行
+      startFileEdit,
+      saveFileEdit,
+      cancelFileEdit,
+      downloading, // 下载等待状态
     };
   }
 }).mount('#app');
@@ -5599,7 +5907,60 @@ const shareHtml = `<!DOCTYPE html>
                   剩余下载次数: {{ fileInfo.maxViews - fileInfo.viewCount }}
                   (已下载 {{ fileInfo.viewCount }} 次)
                 </p>
-                <button class="btn" @click="downloadFile" style="margin-top: 1rem;">下载文件</button>
+                
+                <!-- 按钮容器 -->
+                <div class="button-group" style="display: flex; gap: 1rem; margin-top: 1rem;">
+                  <button class="btn" 
+                          @click="downloadFile" 
+                          :disabled="downloading">
+                    <span v-if="downloading" class="loading-spinner"></span>
+                    {{ downloading ? '准备下载中...' : '下载文件' }}
+                  </button>
+                  <button v-if="isAdmin && !isFileEditing" 
+                          class="btn" 
+                          @click="startFileEdit">
+                    编辑设置
+                  </button>
+                </div>
+                  
+                  <template v-if="isFileEditing">
+                    <div class="settings" style="margin: 1rem 0;">
+                      <div class="input-group">
+                        <label>过期时间</label>
+                        <select v-model="editFileExpiresIn" class="form-select">
+                          <option value="1h">1小时</option>
+                          <option value="1d">1天</option>
+                          <option value="7d">7天</option>
+                          <option value="30d">30天</option>
+                          <option value="never">永不过期</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                      <label>可下载次数 (0表示无限制)</label>
+                      <input 
+                        type="number" 
+                        v-model="editFileMaxViews"
+                        min="0"
+                        placeholder="0"
+                        title="设置文件可以被下载的次数，0或留空表示无限制"
+                      >
+                      </div>
+                    </div>
+                    
+                    <div class="actions" style="margin-top: 1rem;">
+                      <button class="btn" 
+                              @click="saveFileEdit" 
+                              style="margin-right: 0.5rem;">
+                        保存
+                      </button>
+                      <button class="btn" 
+                              style="background: #95a5a6;" 
+                              @click="cancelFileEdit">
+                        取消
+                      </button>
+                    </div>
+                </template>
               </div>
               <div v-else class="content">
                 <!-- 添加控制按钮区域 -->
@@ -5633,11 +5994,6 @@ const shareHtml = `<!DOCTYPE html>
                 </div>
 
                 <div v-if="isEditing">
-                  <!-- 添加 Markdown 开关 -->
-                  <div class="markdown-toggle" style="margin-bottom: 1rem;">
-                    <input type="checkbox" id="edit-markdown-toggle" v-model="editMarkdown">
-                    <label for="edit-markdown-toggle">启用 Markdown</label>
-                  </div>
                   <!-- 添加编辑器容器 -->
                   <div class="editor-container">
                     <div class="editor">
@@ -5653,6 +6009,41 @@ const shareHtml = `<!DOCTYPE html>
                       v-html="editPreview"
                     ></div>
                   </div>
+
+                  <!-- 底部控制区域 -->
+                  <div class="settings" style="margin-top: 1rem;">
+                    <!-- Markdown 开关 -->
+                    <div class="input-group">
+                      <div class="markdown-toggle" style="margin-bottom: 0;">
+                        <input type="checkbox" id="edit-markdown-toggle" v-model="editMarkdown">
+                        <label for="edit-markdown-toggle">启用 Markdown</label>
+                      </div>
+                    </div>
+                    
+                    <!-- 过期时间选择框 -->
+                    <div class="input-group">
+                      <label>过期时间</label>
+                      <select v-model="editExpiresIn" class="form-select">
+                        <option value="1h">1小时</option>
+                        <option value="1d">1天</option>
+                        <option value="7d">7天</option>
+                        <option value="30d">30天</option>
+                        <option value="never">永不过期</option>
+                      </select>
+                    </div>
+
+                    <!-- 访问次数输入框 -->
+                    <div class="input-group">
+                      <label>可访问次数</label>
+                      <input 
+                        type="number" 
+                        v-model="editMaxViews"
+                        min="0"
+                        placeholder="0表示无限制"
+                        class="form-input"
+                      >
+                    </div>
+                  </div>
                 </div>
                 <div v-else>
                   <div v-if="isMarkdown" v-html="renderedContent"></div>
@@ -5660,13 +6051,68 @@ const shareHtml = `<!DOCTYPE html>
                 </div>
               </div>
               <div class="expiry-info">
-                {{ formatExpiryTime }}
+                <span>{{ formatExpiryTime }}</span>
+                <span v-if="isEditing && maxViews > 0" class="view-count-info">
+                  · 剩余访问次数: {{ maxViews - viewCount }}
+                  (已访问 {{ viewCount }} 次)
+                </span>
               </div>
             </template>
           </div>
         </div>
       </div>
     </div>
+    <style>
+      /* 添加加载动画样式 */
+      .loading-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* 优化按钮禁用状态样式 */
+      .btn:disabled {
+        opacity: 0.8;
+        cursor: not-allowed;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .btn:disabled::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          45deg,
+          rgba(255,255,255,0.1) 25%,
+          transparent 25%,
+          transparent 50%,
+          rgba(255,255,255,0.1) 50%,
+          rgba(255,255,255,0.1) 75%,
+          transparent 75%
+        );
+        background-size: 20px 20px;
+        animation: loading-stripes 1s linear infinite;
+      }
+
+      @keyframes loading-stripes {
+        0% { background-position: 0 0; }
+        100% { background-position: 20px 0; }
+      }
+    </style>
     <script>${shareAppScript}</script>
 </body>
 </html>`;
@@ -5679,6 +6125,23 @@ async function handlePaste(request, env) {
 
   switch (request.method) {
     case "POST": {
+      // 添加管理员权限验证
+      if (!(await verifyAdmin(request, env))) {
+        return new Response(
+          JSON.stringify({
+            status: "error",
+            message: "未授权访问",
+          }),
+          {
+            status: 401,
+            headers: {
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": "*",
+            },
+          }
+        );
+      }
+
       const data = await request.json();
       const { content, password: inputPassword, expiresIn, isMarkdown = false, customId = "", maxViews = 0 } = data;
 
@@ -5826,37 +6289,43 @@ async function handlePaste(request, env) {
         );
       }
 
-      const inputPassword = request.headers.get("X-Password");
-      if (paste.passwordHash) {
-        if (!inputPassword) {
-          return new Response(
-            JSON.stringify({
-              message: "Password required",
-              status: "error",
-            }),
-            {
-              status: 401,
-              headers: {
-                "Content-Type": "application/json",
-                "Cache-Control": "no-store",
-              },
-            }
-          );
-        }
-        if (!(await utils.verifyPassword(inputPassword, paste.passwordHash))) {
-          return new Response(
-            JSON.stringify({
-              message: "Invalid password",
-              status: "error",
-            }),
-            {
-              status: 403,
-              headers: {
-                "Content-Type": "application/json",
-                "Cache-Control": "no-store",
-              },
-            }
-          );
+      // 先检查是否是管理员
+      const isAdmin = await verifyAdmin(request, env);
+
+      // 如果是管理员,跳过密码验证
+      if (!isAdmin) {
+        const inputPassword = request.headers.get("X-Password");
+        if (paste.passwordHash) {
+          if (!inputPassword) {
+            return new Response(
+              JSON.stringify({
+                message: "Password required",
+                status: "error",
+              }),
+              {
+                status: 401,
+                headers: {
+                  "Content-Type": "application/json",
+                  "Cache-Control": "no-store",
+                },
+              }
+            );
+          }
+          if (!(await utils.verifyPassword(inputPassword, paste.passwordHash))) {
+            return new Response(
+              JSON.stringify({
+                message: "Invalid password",
+                status: "error",
+              }),
+              {
+                status: 403,
+                headers: {
+                  "Content-Type": "application/json",
+                  "Cache-Control": "no-store",
+                },
+              }
+            );
+          }
         }
       }
 
@@ -5890,12 +6359,14 @@ async function handlePaste(request, env) {
           isMarkdown: paste.isMarkdown,
           createdAt: paste.createdAt,
           expiresAt: paste.expiresAt,
+          maxViews: paste.maxViews || 0, // 确保返回数值
+          viewCount: paste.viewCount || 0, // 确保返回数值
           status: "success",
         }),
         {
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "no-store",
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
           },
         }
       );
@@ -5924,6 +6395,23 @@ async function handleFile(request, env, ctx) {
   switch (request.method) {
     case "POST": {
       try {
+        // 添加管理员权限验证
+        if (!(await verifyAdmin(request, env))) {
+          return new Response(
+            JSON.stringify({
+              status: "error",
+              message: "未授权访问",
+            }),
+            {
+              status: 401,
+              headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+              },
+            }
+          );
+        }
+
         // 计算当前已使用的存储空间
         let currentStorage = 0;
         const fileList = await env.FILE_STORE.list();
@@ -6268,31 +6756,37 @@ async function handleFile(request, env, ctx) {
           );
         }
 
-        const inputPassword = request.headers.get("X-Password");
-        if (metadata.passwordHash) {
-          if (!inputPassword) {
-            return new Response(
-              JSON.stringify({
-                message: "Password required",
-                status: "error",
-              }),
-              {
-                status: 401,
-                headers: { "Content-Type": "application/json" },
-              }
-            );
-          }
-          if (!(await utils.verifyPassword(inputPassword, metadata.passwordHash))) {
-            return new Response(
-              JSON.stringify({
-                message: "Invalid password",
-                status: "error",
-              }),
-              {
-                status: 403,
-                headers: { "Content-Type": "application/json" },
-              }
-            );
+        // 先检查是否是管理员
+        const isAdmin = await verifyAdmin(request, env);
+
+        // 如果是管理员,跳过密码验证
+        if (!isAdmin) {
+          const inputPassword = request.headers.get("X-Password");
+          if (metadata.passwordHash) {
+            if (!inputPassword) {
+              return new Response(
+                JSON.stringify({
+                  message: "Password required",
+                  status: "error",
+                }),
+                {
+                  status: 401,
+                  headers: { "Content-Type": "application/json" },
+                }
+              );
+            }
+            if (!(await utils.verifyPassword(inputPassword, metadata.passwordHash))) {
+              return new Response(
+                JSON.stringify({
+                  message: "Invalid password",
+                  status: "error",
+                }),
+                {
+                  status: 403,
+                  headers: { "Content-Type": "application/json" },
+                }
+              );
+            }
           }
         }
 
@@ -6353,6 +6847,7 @@ async function handleFile(request, env, ctx) {
             contentDisposition = `attachment; filename*=UTF-8''${encodedFilename}`;
           }
 
+          // 创建 TransformStream 用于处理下载进度
           const progress = new TransformStream({
             start(controller) {
               this.loaded = 0;
@@ -7037,7 +7532,7 @@ export default {
             try {
               const pathParts = url.pathname.split("/");
               const id = pathParts[pathParts.length - 2];
-              const { content, isMarkdown } = await request.json();
+              const { content, isMarkdown, expiresIn, maxViews } = await request.json();
 
               const storedPaste = await env.PASTE_STORE.get(id);
               if (!storedPaste) {
@@ -7055,7 +7550,15 @@ export default {
 
               const paste = JSON.parse(storedPaste);
               paste.content = content;
-              paste.isMarkdown = isMarkdown; // 更新 Markdown 状态
+              paste.isMarkdown = isMarkdown;
+              paste.expiresAt = expiresIn === "never" ? null : utils.calculateExpiryTime(expiresIn)?.toISOString();
+
+              // 如果修改了最大访问次数，重置访问计数
+              const newMaxViews = parseInt(maxViews) || 0;
+              if (paste.maxViews !== newMaxViews) {
+                paste.maxViews = newMaxViews;
+                paste.viewCount = 0; // 重置访问计数
+              }
 
               await env.PASTE_STORE.put(id, JSON.stringify(paste));
 
@@ -7063,9 +7566,16 @@ export default {
                 JSON.stringify({
                   status: "success",
                   message: "内容已更新",
+                  expiresAt: paste.expiresAt,
+                  maxViews: paste.maxViews,
+                  viewCount: paste.viewCount,
                 }),
                 {
-                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                  headers: {
+                    ...corsHeaders,
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+                  },
                 }
               );
             } catch (error) {
@@ -7148,6 +7658,75 @@ export default {
                     "Content-Type": "application/json",
                     "Access-Control-Allow-Origin": "*",
                   },
+                }
+              );
+            }
+          }
+
+          // 在 handleFile 函数中添加新的路由处理
+          if (url.pathname.match(/^\/api\/admin\/file\/[a-zA-Z0-9-_]+\/settings$/)) {
+            if (request.method !== "PUT") {
+              return new Response("Method not allowed", { status: 405 });
+            }
+
+            // 验证管理员权限
+            if (!(await verifyAdmin(request, env))) {
+              return new Response("Unauthorized", { status: 401 });
+            }
+
+            try {
+              const pathParts = url.pathname.split("/");
+              const id = pathParts[pathParts.length - 2];
+              const { expiresIn, maxViews } = await request.json();
+
+              const file = await env.FILE_STORE.get(id);
+              if (!file) {
+                return new Response(
+                  JSON.stringify({
+                    status: "error",
+                    message: "文件不存在",
+                  }),
+                  {
+                    status: 404,
+                    headers: { "Content-Type": "application/json" },
+                  }
+                );
+              }
+
+              const metadata = file.customMetadata;
+              metadata.expiresAt = expiresIn === "never" ? null : utils.calculateExpiryTime(expiresIn)?.toISOString();
+              // 如果修改了最大下载次数，重置下载计数
+              const newMaxViews = parseInt(maxViews) || 0;
+              if (metadata.maxViews !== newMaxViews) {
+                metadata.maxViews = newMaxViews;
+                metadata.viewCount = 0;
+              }
+
+              await env.FILE_STORE.put(id, await file.arrayBuffer(), {
+                customMetadata: metadata,
+              });
+
+              return new Response(
+                JSON.stringify({
+                  status: "success",
+                  message: "设置已更新",
+                  expiresAt: metadata.expiresAt,
+                  maxViews: metadata.maxViews,
+                  viewCount: metadata.viewCount,
+                }),
+                {
+                  headers: { "Content-Type": "application/json" },
+                }
+              );
+            } catch (error) {
+              return new Response(
+                JSON.stringify({
+                  status: "error",
+                  message: "更新失败",
+                }),
+                {
+                  status: 500,
+                  headers: { "Content-Type": "application/json" },
                 }
               );
             }
