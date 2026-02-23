@@ -5,16 +5,18 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useScheduledJobs } from "@/modules/admin/composables/useScheduledJobs";
 import { useThemeMode } from "@/composables/core/useThemeMode.js";
-import { useConfirmDialog } from "@/composables/core/useConfirmDialog.js";
+import { useConfirmDialog, createConfirmFn } from "@/composables/core/useConfirmDialog.js";
 import { formatDateTime, formatDateTimeWithSeconds } from "@/utils/timeUtils.js";
 import AdminTable from "@/components/common/AdminTable.vue";
 import ConfirmDialog from "@/components/common/dialogs/ConfirmDialog.vue";
 import ScheduledJobDetailModal from "@/modules/admin/components/ScheduledJobDetailModal.vue";
 import { IconArrowUp, IconCheckCircle, IconChevronDown, IconDelete, IconEye, IconFolderPlus, IconRefresh, IconRename, IconSearch, IconXCircle } from "@/components/icons";
+import { createLogger } from "@/utils/logger.js";
 
 const { t } = useI18n();
 const router = useRouter();
 const { isDarkMode: darkMode } = useThemeMode();
+const log = createLogger("ScheduledJobsView");
 
 // 全局时钟：用于实时更新相对时间显示（倒计时）
 const currentTick = ref(0);
@@ -57,15 +59,11 @@ onUnmounted(() => {
 // 确认对话框
 const { dialogState, confirm, handleConfirm, handleCancel } = useConfirmDialog();
 
-const confirmFn = async ({ title, message, confirmType }) => {
-  return await confirm({
-    title,
-    message,
-    confirmType,
-    confirmText: t("common.dialogs.deleteButton"),
-    darkMode: darkMode.value,
-  });
-};
+const confirmFn = createConfirmFn(confirm, {
+  t,
+  darkMode,
+  getConfirmText: () => t("common.dialogs.deleteButton"),
+});
 
 const {
   jobs, currentJob, jobRuns, loading, runsLoading, filteredJobs, enabledFilter,
@@ -76,6 +74,7 @@ const {
   schedulerTicker,
   schedulerTickerLoading,
   loadSchedulerTicker,
+  isJobRunning,
 } = useScheduledJobs();
 
 // 路由导航函数
@@ -186,7 +185,7 @@ const loadAnalytics = async () => {
     const data = await loadHourlyAnalytics(24);
     hourlyAnalytics.value = data;
   } catch (error) {
-    console.error('[热力图] 加载统计数据失败:', error);
+    log.error("[热力图] 加载统计数据失败:", error);
   }
 };
 
@@ -555,7 +554,7 @@ const handleDelete = async (job) => {
 
 const handleRunNow = async (job) => {
   await runJobNow(job.taskId);
-  await handleRefresh();
+  await loadJobs({}, { silent: true });
 };
 
 const handleViewDetail = async (job) => {
@@ -701,32 +700,60 @@ const jobColumns = computed(() => [
     header: t("admin.scheduledJobs.detail.actions"),
     sortable: false,
     render: (row) => {
+      const running = isJobRunning(row.taskId);
       return h("div", { class: "flex items-center justify-center gap-1" }, [
         // 立即执行按钮
         h("button", {
           class: [
             "p-1.5 rounded transition",
+            running
+              ? "opacity-50 cursor-not-allowed"
+              : "",
             darkMode.value ? "text-green-400 hover:bg-gray-700 hover:text-green-300" : "text-green-600 hover:bg-gray-100 hover:text-green-700"
           ],
           title: t("admin.scheduledJobs.actions.runNow"),
+          disabled: running,
           onClick: (e) => {
             e.stopPropagation();
-            handleRunNow(row);
+            if (!running) {
+              handleRunNow(row);
+            }
           }
         }, [
-          h("svg", {
-            class: "h-5 w-5",
-            fill: "none",
-            viewBox: "0 0 24 24",
-            stroke: "currentColor"
-          }, [
-            h("path", {
-              "stroke-linecap": "round",
-              "stroke-linejoin": "round",
-              "stroke-width": "2",
-              d: "M13 10V3L4 14h7v7l9-11h-7z"
-            })
-          ])
+          // 根据运行状态显示不同图标
+          running
+            ? h("svg", {
+                class: "h-5 w-5 animate-spin",
+                fill: "none",
+                viewBox: "0 0 24 24"
+              }, [
+                h("circle", {
+                  class: "opacity-25",
+                  cx: "12",
+                  cy: "12",
+                  r: "10",
+                  stroke: "currentColor",
+                  "stroke-width": "4"
+                }),
+                h("path", {
+                  class: "opacity-75",
+                  fill: "currentColor",
+                  d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                })
+              ])
+            : h("svg", {
+                class: "h-5 w-5",
+                fill: "none",
+                viewBox: "0 0 24 24",
+                stroke: "currentColor"
+              }, [
+                h("path", {
+                  "stroke-linecap": "round",
+                  "stroke-linejoin": "round",
+                  "stroke-width": "2",
+                  d: "M13 10V3L4 14h7v7l9-11h-7z"
+                })
+              ])
         ]),
         
         // 查看详情按钮
@@ -1148,12 +1175,14 @@ const jobColumnClasses = {
                   </button>
                   
                   <!-- 立即执行按钮 -->
-                  <button 
-                    @click="handleRunNow(job)" 
-                    class="flex items-center px-3 py-1.5 rounded text-sm font-medium transition" 
+                  <button
+                    @click="handleRunNow(job)"
+                    :disabled="isJobRunning(job.taskId)"
+                    class="flex items-center px-3 py-1.5 rounded text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
                     :class="darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-100 hover:bg-blue-200 text-blue-800'"
                   >
-                    <IconArrowUp class="h-4 w-4 mr-1.5" />
+                    <IconRefresh v-if="isJobRunning(job.taskId)" class="h-4 w-4 mr-1.5 animate-spin" />
+                    <IconArrowUp v-else class="h-4 w-4 mr-1.5" />
                     {{ t('admin.scheduledJobs.actions.runNow') }}
                   </button>
                   
